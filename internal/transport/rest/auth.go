@@ -50,13 +50,9 @@ func (h *Handler) signIN(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 
-	cookie, err := r.Cookie("Token")
-	if err != nil {
-		http.Error(w, "unauthorized", 401)
-		return
-	}
+	cookie, _ := r.Cookie("Token")
 
-	err = h.Service.Auth.Logout(r.Context(), cookie)
+	err := h.Service.Auth.Logout(r.Context(), cookie)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
