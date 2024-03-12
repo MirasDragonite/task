@@ -7,9 +7,10 @@ func NewRouter(h *Handler) *chi.Mux {
 
 	r.Post("/sign-up", h.signUp)
 	r.Post("/sign-in", h.signIN)
-	r.Post("/create-book", h.CreateBook)
-	r.Post("/delete-book", h.deleteBook)
-	r.Get("/book", h.getBook)
-	r.Get("/get-books", h.getAllBooks)
+	r.Post("/log-out", h.RequireAuth(h.logout))
+	r.Post("/create-book", h.RequireAuth(h.CreateBook))
+	r.Post("/delete-book", h.RequireAuth(h.deleteBook))
+	r.Get("/book", h.RequireAuth(h.getBook))
+	r.Get("/get-books", h.RequireAuth(h.getAllBooks))
 	return r
 }

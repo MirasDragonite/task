@@ -1,6 +1,7 @@
 package services
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"miras/internal/controllers"
@@ -32,7 +33,7 @@ func (s *AuthService) Register(user models.Register) error {
 
 }
 
-func (s *AuthService) Login(login models.Login) (*http.Cookie, error) {
+func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cookie, error) {
 	cookie := &http.Cookie{
 		Name:     "Token",
 		Path:     "/",
@@ -56,20 +57,36 @@ func (s *AuthService) Login(login models.Login) (*http.Cookie, error) {
 
 	cookie.Value = newToken
 	cookie.Expires = time.Now().Add(20 * time.Minute)
-	fmt.Println(cookie)
+
 	session := models.Session{
 		UserID:     user.ID,
 		Token:      cookie.Value,
 		ExpireDate: cookie.Expires,
 	}
 
-	err = s.repo.Auth.CreateSession(session)
+	err = s.repo.Auth.CreateSession(ctx, session)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
 	}
 
 	return cookie, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, cookie *http.Cookie) error {
+
+	err := s.repo.Auth.DeleteToken(ctx, cookie.Value)
+
+	if err != nil {
+		return err
+	}
+
+	cookie.Value = ""
+	cookie.Path = "/"
+	cookie.MaxAge = -1
+	cookie.HttpOnly = false
+
+	return nil
 }
 
 func hashPassword(password string) (string, error) {

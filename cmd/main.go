@@ -20,7 +20,7 @@ func main() {
 	}
 	repo := controllers.NewRepository(db, cache)
 	service := services.NewService(repo)
-	handlers := rest.NewHandler(service)
+	handlers := rest.NewHandler(service, cache)
 
 	router := rest.NewRouter(handlers)
 

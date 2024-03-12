@@ -9,7 +9,8 @@ import (
 
 type Auth interface {
 	Register(user models.Register) error
-	Login(login models.Login) (*http.Cookie, error)
+	Login(ctx context.Context, login models.Login) (*http.Cookie, error)
+	Logout(ctx context.Context, cookie *http.Cookie) error
 }
 
 type Book interface {

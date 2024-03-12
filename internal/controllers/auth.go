@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"miras/internal/models"
@@ -40,11 +41,11 @@ func (r *AuthRepo) SelectUser(login models.Login) (models.User, error) {
 	if err != nil {
 		return models.User{}, err
 	}
-	fmt.Println("GIG1")
+
 	return user, nil
 }
 
-func (r *AuthRepo) CreateSession(session models.Session) error {
+func (r *AuthRepo) CreateSession(ctx context.Context, session models.Session) error {
 
 	query := `INSERT INTO sessions(user_id,token,expired_date) VALUES($1,$2,$3)`
 	expDate := session.ExpireDate.Format("2006-01-02 15:04:05")
@@ -52,7 +53,11 @@ func (r *AuthRepo) CreateSession(session models.Session) error {
 	if err != nil {
 		return err
 	}
-
+	err = r.cache.Set(&cache.Item{Ctx: ctx, Key: "session", Value: session, TTL: time.Minute * 30})
+	if err != nil {
+		return err
+	}
+	fmt.Println("Session cached to 30 minute")
 	return nil
 }
 
@@ -90,4 +95,19 @@ func (r *AuthRepo) GetSessionByUserID(id int) (models.Session, error) {
 	}
 
 	return session, nil
+}
+
+func (r *AuthRepo) DeleteToken(ctx context.Context, token string) error {
+
+	query := `DELETE FROM sessions WHERE token=$1`
+
+	_, err := r.db.Exec(query, token)
+	if err != nil {
+		return err
+	}
+	err = r.cache.Delete(ctx, "session")
+	if err != nil {
+		return err
+	}
+	return nil
 }

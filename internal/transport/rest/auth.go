@@ -38,7 +38,7 @@ func (h *Handler) signIN(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cookie, err := h.Service.Login(user)
+	cookie, err := h.Service.Login(r.Context(), user)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 	}
@@ -46,4 +46,21 @@ func (h *Handler) signIN(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(200)
 	w.Write([]byte("User successfully create"))
+}
+
+func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+
+	cookie, err := r.Cookie("Token")
+	if err != nil {
+		http.Error(w, "unauthorized", 401)
+		return
+	}
+
+	err = h.Service.Auth.Logout(r.Context(), cookie)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+
+	w.Write([]byte("successfully logout"))
 }

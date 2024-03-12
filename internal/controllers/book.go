@@ -58,7 +58,7 @@ func (r *BookRepo) GetBookByID(ctx context.Context, id int) (*models.Book, error
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("cached:", book)
+	fmt.Println("Cache: Add to cache", book)
 	return &book, nil
 }
 
@@ -68,7 +68,7 @@ func (r *BookRepo) GetAllBooks(ctx context.Context) ([]models.Book, error) {
 
 	err := r.cache.Get(ctx, key, &books)
 	if err == nil {
-		fmt.Println("Get data from cache")
+		fmt.Println("Get data from cache", books)
 		return books, nil
 	}
 
@@ -90,6 +90,7 @@ func (r *BookRepo) GetAllBooks(ctx context.Context) ([]models.Book, error) {
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Cache: Add to cache", books)
 	return books, nil
 }
 
@@ -115,6 +116,7 @@ func (r *BookRepo) DeleteCacheFor(ctx context.Context, s ...string) error {
 		if err != nil {
 			return err
 		}
+		fmt.Println("Cache: Deleted from cache")
 	}
 	return nil
 }
