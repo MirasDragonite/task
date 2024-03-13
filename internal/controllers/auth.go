@@ -1,11 +1,8 @@
 package controllers
 
 import (
-	"context"
 	"database/sql"
-	"fmt"
 	"miras/internal/models"
-	"time"
 
 	"github.com/go-redis/cache/v9"
 )
@@ -43,71 +40,4 @@ func (r *AuthRepo) SelectUser(login models.Login) (models.User, error) {
 	}
 
 	return user, nil
-}
-
-func (r *AuthRepo) CreateSession(ctx context.Context, session models.Session) error {
-
-	query := `INSERT INTO sessions(user_id,token,expired_date) VALUES($1,$2,$3)`
-	expDate := session.ExpireDate.Format("2006-01-02 15:04:05")
-	_, err := r.db.Exec(query, session.UserID, session.Token, expDate)
-	if err != nil {
-		return err
-	}
-	err = r.cache.Set(&cache.Item{Ctx: ctx, Key: "session", Value: session, TTL: time.Minute * 30})
-	if err != nil {
-		return err
-	}
-	fmt.Println("Session cached to 30 minute")
-	return nil
-}
-
-func (r *AuthRepo) GetSessionByToken(token string) (models.Session, error) {
-	var session models.Session
-	query := `SELECT * FROM sessions WHERE token=$1`
-
-	row := r.db.QueryRow(query, token)
-	var date string
-	err := row.Scan(&session.ID, &session.UserID, &session.Token, &date)
-	if err != nil {
-		return models.Session{}, err
-	}
-	session.ExpireDate, err = time.Parse("2006-01-02 15:04:05", date)
-	if err != nil {
-		return models.Session{}, err
-	}
-
-	return session, nil
-}
-
-func (r *AuthRepo) GetSessionByUserID(id int) (models.Session, error) {
-	var session models.Session
-	query := `SELECT * FROM sessions WHERE user_id=$1`
-
-	row := r.db.QueryRow(query, id)
-	var date string
-	err := row.Scan(&session.ID, &session.UserID, &session.Token, &date)
-	if err != nil {
-		return models.Session{}, err
-	}
-	session.ExpireDate, err = time.Parse("2006-01-02 15:04:05", date)
-	if err != nil {
-		return models.Session{}, err
-	}
-
-	return session, nil
-}
-
-func (r *AuthRepo) DeleteToken(ctx context.Context, token string) error {
-
-	query := `DELETE FROM sessions WHERE token=$1`
-
-	_, err := r.db.Exec(query, token)
-	if err != nil {
-		return err
-	}
-	err = r.cache.Delete(ctx, "session")
-	if err != nil {
-		return err
-	}
-	return nil
 }

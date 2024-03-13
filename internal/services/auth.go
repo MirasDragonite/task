@@ -21,6 +21,7 @@ func newAuthService(repo *controllers.Repository) *AuthService {
 	return &AuthService{repo: repo}
 }
 
+// registration in service layer
 func (s *AuthService) Register(user models.Register) error {
 	hashPassword, err := hashPassword(user.Password)
 	if err != nil {
@@ -33,7 +34,9 @@ func (s *AuthService) Register(user models.Register) error {
 
 }
 
+// logining in service layer
 func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cookie, error) {
+	// new cookie to define our session
 	cookie := &http.Cookie{
 		Name:     "Token",
 		Path:     "/",
@@ -44,7 +47,7 @@ func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cook
 	if err != nil {
 		return nil, err
 	}
-
+	// comapare our passwords to check are they match
 	if !doPasswordsMatch(user.Password, login.Password) {
 		return nil, errors.New("password don't match")
 	}
@@ -56,39 +59,21 @@ func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cook
 	}
 
 	cookie.Value = newToken
-	cookie.Expires = time.Now().Add(20 * time.Minute)
-
-	session := models.Session{
-		UserID:     user.ID,
-		Token:      cookie.Value,
-		ExpireDate: cookie.Expires,
-	}
-
-	err = s.repo.Auth.CreateSession(ctx, session)
-	if err != nil {
-		fmt.Println(err)
-		return nil, err
-	}
+	cookie.Expires = time.Now().Add(10 * time.Minute)
 
 	return cookie, nil
 }
 
-func (s *AuthService) Logout(ctx context.Context, cookie *http.Cookie) error {
-
-	err := s.repo.Auth.DeleteToken(ctx, cookie.Value)
-
-	if err != nil {
-		return err
-	}
-
+func (s *AuthService) Logout(cookie *http.Cookie) {
+	// values to delete our cookie
 	cookie.Value = ""
 	cookie.Path = "/"
 	cookie.MaxAge = -1
 	cookie.HttpOnly = false
 
-	return nil
 }
 
+// function to hash password
 func hashPassword(password string) (string, error) {
 
 	var passwordBytes = []byte(password)
@@ -99,12 +84,14 @@ func hashPassword(password string) (string, error) {
 	return string(hashedPasswordBytes), err
 }
 
+// function to comapre passwords
 func doPasswordsMatch(hashedPassword, currPassword string) bool {
 	err := bcrypt.CompareHashAndPassword(
 		[]byte(hashedPassword), []byte(currPassword))
 	return err == nil
 }
 
+// new token for our session
 func GenerateJWTToken() (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 

@@ -11,10 +11,6 @@ import (
 type Auth interface {
 	CreateUser(user models.Register) error
 	SelectUser(login models.Login) (models.User, error)
-	GetSessionByUserID(id int) (models.Session, error)
-	GetSessionByToken(token string) (models.Session, error)
-	CreateSession(ctx context.Context, session models.Session) error
-	DeleteToken(ctx context.Context, token string) error
 }
 
 type Book interface {

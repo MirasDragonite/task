@@ -2,26 +2,28 @@ package controllers
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
+	"os"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func NewDB() (*sql.DB, error) {
-
+	//opening new connection to db
 	db, err := sql.Open("sqlite3", "db.db")
 	if err != nil {
 		return nil, err
 	}
-	query := `
-	DROP TABLE IF EXISTS books;
-	DROP TABLE IF EXISTS sessions;
- 	DROP TABLE IF EXISTS users;
-	CREATE TABLE IF NOT  EXISTS users(id INTEGER PRIMARY KEY, username TEXT,email TEXT NOT NULL UNIQUE,hash_password TEXT NOT NULL);
-	CREATE TABLE IF NOT EXISTS sessions(id INTEGER PRIMARY KEY,user_id INTEGER,token TEXT NOT NULL UNIQUE,expired_date TEXT NOT NULL,FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE);	
-	CREATE TABLE IF NOT EXISTS books(id INTEGER PRIMARY KEY,name TEXT NOT NULL,author TEXT NOT NULL,genre TEXT NOT NULL,year TEXT NOT NULL)
-	`
 
+	// taking our queries from .txt file
+	sqlBytes, err := os.ReadFile("migrations.txt")
+	if err != nil {
+		return nil, errors.New("failed to read file: " + err.Error())
+	}
+	query := string(sqlBytes)
+
+	//inserting our data into db
 	_, err = db.Exec(query)
 	if err != nil {
 		return nil, err

@@ -5,8 +5,12 @@ import (
 	"log"
 	"miras/internal/models"
 	"net/http"
+	"time"
+
+	"github.com/go-redis/cache/v9"
 )
 
+// Handler to register new user
 func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) {
 
 	var user models.Register
@@ -27,6 +31,7 @@ func (h *Handler) signUp(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("User successfully create"))
 }
 
+// handler to login into the sytem
 func (h *Handler) signIN(w http.ResponseWriter, r *http.Request) {
 
 	var user models.Login
@@ -37,10 +42,15 @@ func (h *Handler) signIN(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-
+	// we use context
 	cookie, err := h.Service.Login(r.Context(), user)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
+	}
+	err = h.cache.Set(&cache.Item{Ctx: r.Context(), Key: "session", Value: cookie, TTL: time.Minute * 10})
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
 	}
 	http.SetCookie(w, cookie)
 
@@ -49,14 +59,15 @@ func (h *Handler) signIN(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
-
+	// don't take err cause this function wrapped with middleware, and it's already check cookies
 	cookie, _ := r.Cookie("Token")
 
-	err := h.Service.Auth.Logout(r.Context(), cookie)
+	h.Service.Auth.Logout(cookie)
+
+	err := h.cache.Delete(r.Context(), "session")
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-
 	w.Write([]byte("successfully logout"))
 }
