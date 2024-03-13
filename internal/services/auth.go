@@ -34,7 +34,13 @@ func (s *AuthService) Register(user models.Register) error {
 	if err != nil {
 		return err
 	}
-	err = s.repo.Auth.AddForUser(id, "book:read", "book:create")
+	permissions := []string{"book:read", "book:create"}
+	if user.Role == "admin" {
+		permissions = append(permissions, "book:delete", "book:read_all")
+	} else if user.Role == "employee" {
+		permissions = append(permissions, "book:read_all")
+	}
+	err = s.repo.Auth.AddForUser(id, permissions...)
 	if err != nil {
 		return err
 	}
@@ -60,7 +66,7 @@ func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cook
 		return nil, models.Session{}, errors.New("password don't match")
 	}
 
-	newToken, err := GenerateJWTToken()
+	newToken, err := GenerateJWTToken(user.Username)
 
 	if err != nil {
 		return nil, models.Session{}, err
@@ -103,7 +109,7 @@ func doPasswordsMatch(hashedPassword, currPassword string) bool {
 }
 
 // new token for our session
-func GenerateJWTToken() (string, error) {
+func GenerateJWTToken(username string) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)

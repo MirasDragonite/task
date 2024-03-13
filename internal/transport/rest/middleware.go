@@ -16,13 +16,13 @@ func (h *Handler) RequirePermissions(request http.HandlerFunc, permissions ...st
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		fmt.Println(session.UserID)
+		fmt.Println(session)
 		availablePermissions, err := h.Service.Auth.GetAllUserPermissions(r.Context(), int64(session.UserID))
 		if err != nil {
 			http.Error(w, "bad request"+err.Error(), http.StatusBadRequest)
 			return
 		}
-		fmt.Println(availablePermissions)
+		fmt.Println(permissions, availablePermissions)
 		if !Includes(permissions, availablePermissions.Permissions) {
 			http.Error(w, "Access denied", http.StatusBadRequest)
 			return
@@ -37,7 +37,7 @@ func (h *Handler) RequireAuth(request http.HandlerFunc) http.HandlerFunc {
 		//take current session from our user
 		cookie, err := r.Cookie("Token")
 		if err != nil {
-			fmt.Println("hERE1")
+
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
@@ -46,7 +46,7 @@ func (h *Handler) RequireAuth(request http.HandlerFunc) http.HandlerFunc {
 		//get session from cache and compare it with current session
 		err = h.cache.Get(r.Context(), "session", &session)
 		if err != nil || session.Token != cookie.Value || session.ExpireDate.Before(time.Now()) {
-			fmt.Println("hERE2", session, "cookie:", cookie)
+
 			// if they don't match  then delete the token from our cache and show error with code 401
 			err = h.cache.Delete(r.Context(), "session")
 			if err != nil {
@@ -61,7 +61,7 @@ func (h *Handler) RequireAuth(request http.HandlerFunc) http.HandlerFunc {
 }
 
 func Includes(permissions []string, available map[string]bool) bool {
-	fmt.Println(permissions, "MAP:", available)
+
 	for _, ch := range permissions {
 		if !available[ch] {
 			return false

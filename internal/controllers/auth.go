@@ -3,7 +3,6 @@ package controllers
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"miras/internal/models"
 	"strings"
 	"time"
@@ -22,8 +21,8 @@ func newAuthRepo(db *sql.DB, cache *cache.Cache) *AuthRepo {
 
 func (r *AuthRepo) CreateUser(user models.Register) (int64, error) {
 
-	query := `INSERT INTO users(username,email,hash_password) VALUES($1,$2,$3) RETURNING id;`
-	result, err := r.db.Exec(query, user.Username, user.Email, user.Password)
+	query := `INSERT INTO users(username,email,hash_password,role) VALUES($1,$2,$3,$4) RETURNING id;`
+	result, err := r.db.Exec(query, user.Username, user.Email, user.Password, user.Role)
 	if err != nil {
 		return 0, err
 	}
@@ -40,7 +39,7 @@ func (r *AuthRepo) SelectUser(login models.Login) (models.User, error) {
 
 	query := `SELECT * FROM users WHERE email=$1`
 	row := r.db.QueryRow(query, login.Email)
-	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.Password)
+	err := row.Scan(&user.ID, &user.Username, &user.Email, &user.Password, &user.Role)
 	if err != nil {
 		return models.User{}, err
 	}
@@ -48,16 +47,16 @@ func (r *AuthRepo) SelectUser(login models.Login) (models.User, error) {
 }
 
 func (r *AuthRepo) GetAllUserPermissions(ctx context.Context, userId int64) (models.Permissions, error) {
-	fmt.Println("HERE I AM")
+
 	var permissions models.Permissions
 
 	permissions.Permissions = make(map[string]bool)
 
-	err := r.cache.Get(ctx, "permissions", &permissions)
-	if err == nil {
-		fmt.Println("FROM THIS CACHE")
-		return permissions, nil
-	}
+	// err := r.cache.Get(ctx, "permissions", &permissions)
+	// if err == nil {
+
+	// 	return permissions, nil
+	// }
 
 	query := `SELECT permissions.code
 	FROM permissions
@@ -73,7 +72,7 @@ func (r *AuthRepo) GetAllUserPermissions(ctx context.Context, userId int64) (mod
 	for rows.Next() {
 		var permission string
 		err = rows.Scan(&permission)
-		fmt.Println(permission)
+
 		if err != nil {
 			return models.Permissions{}, err
 		}
