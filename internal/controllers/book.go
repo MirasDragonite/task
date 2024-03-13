@@ -22,12 +22,10 @@ func newBookRepo(db *sql.DB, cache *cache.Cache) *BookRepo {
 func (r *BookRepo) CreateBook(ctx context.Context, book models.Book) error {
 
 	query := `INSERT INTO books(name,author,genre,year) VALUES ($1,$2,$3,$4)`
-
 	_, err := r.db.Exec(query, book.Name, book.Author, book.Genre, book.CreationYear)
 	if err != nil {
 		return err
 	}
-
 	err = r.DeleteCacheFor(ctx, "all")
 	if err != nil {
 		return err
@@ -46,19 +44,16 @@ func (r *BookRepo) GetBookByID(ctx context.Context, id int) (*models.Book, error
 	}
 
 	query := `SELECT * FROM books WHERE id=$1`
-
 	row := r.db.QueryRow(query, id)
-
 	err = row.Scan(&book.Id, &book.Name, &book.Author, &book.Genre, &book.CreationYear)
 	if err != nil {
 		return nil, err
 	}
-
 	err = r.cache.Set(&cache.Item{Ctx: ctx, Key: key, Value: book, TTL: time.Second * 40})
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("Cache: Add to cache", book)
+
 	return &book, nil
 }
 
