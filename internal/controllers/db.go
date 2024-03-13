@@ -16,7 +16,7 @@ func NewDB() (*sql.DB, error) {
 		return nil, err
 	}
 
-	// taking our queries from .txt file
+	// taking our queries from .txt file, cause we don't have actualy migrations in sqlite, so this alternative.
 	sqlBytes, err := os.ReadFile("migrations.txt")
 	if err != nil {
 		return nil, errors.New("failed to read file: " + err.Error())
