@@ -26,3 +26,8 @@ type Register struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
+
+type Permissions struct {
+	UserID      int64
+	Permissions map[string]bool
+}

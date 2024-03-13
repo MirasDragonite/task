@@ -30,12 +30,20 @@ func (s *AuthService) Register(user models.Register) error {
 
 	user.Password = hashPassword
 
-	return s.repo.Auth.CreateUser(user)
+	id, err := s.repo.Auth.CreateUser(user)
+	if err != nil {
+		return err
+	}
+	err = s.repo.Auth.AddForUser(id, "book:read", "book:create")
+	if err != nil {
+		return err
+	}
+	return nil
 
 }
 
 // logining in service layer
-func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cookie, error) {
+func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cookie, models.Session, error) {
 	// new cookie to define our session
 	cookie := &http.Cookie{
 		Name:     "Token",
@@ -45,23 +53,26 @@ func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cook
 
 	user, err := s.repo.Auth.SelectUser(login)
 	if err != nil {
-		return nil, err
+		return nil, models.Session{}, err
 	}
 	// comapare our passwords to check are they match
 	if !doPasswordsMatch(user.Password, login.Password) {
-		return nil, errors.New("password don't match")
+		return nil, models.Session{}, errors.New("password don't match")
 	}
 
 	newToken, err := GenerateJWTToken()
 
 	if err != nil {
-		return nil, err
+		return nil, models.Session{}, err
 	}
+	var session models.Session
 
 	cookie.Value = newToken
 	cookie.Expires = time.Now().Add(10 * time.Minute)
-
-	return cookie, nil
+	session.Token = newToken
+	session.ExpireDate = time.Now().Add(10 * time.Minute)
+	session.UserID = user.ID
+	return cookie, session, nil
 }
 
 func (s *AuthService) Logout(cookie *http.Cookie) {
@@ -109,4 +120,8 @@ func GenerateJWTToken() (string, error) {
 	}
 
 	return tokenString, nil
+}
+
+func (s *AuthService) GetAllUserPermissions(ctx context.Context, userID int64) (models.Permissions, error) {
+	return s.repo.Auth.GetAllUserPermissions(ctx, userID)
 }
