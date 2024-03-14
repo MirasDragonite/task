@@ -44,12 +44,12 @@ func (h *Handler) signIN(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// we use context
-	cookie, session, err := h.Service.Login(r.Context(), user)
+	cookie, err := h.Service.Login(r.Context(), user)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	err = h.cache.Set(&cache.Item{Ctx: r.Context(), Key: "session", Value: session, TTL: time.Minute * 10})
+	err = h.cache.Set(&cache.Item{Ctx: r.Context(), Key: "session", Value: cookie, TTL: time.Minute * 10})
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return

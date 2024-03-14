@@ -3,7 +3,6 @@ package services
 import (
 	"context"
 	"errors"
-	"fmt"
 	"miras/internal/controllers"
 	"miras/internal/models"
 	"net/http"
@@ -50,7 +49,7 @@ func (s *AuthService) Register(user models.Register) error {
 }
 
 // logining in service layer
-func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cookie, models.Session, error) {
+func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cookie, error) {
 	// new cookie to define our session
 	cookie := &http.Cookie{
 		Name:     "Token",
@@ -60,32 +59,27 @@ func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cook
 
 	user, err := s.repo.Auth.SelectUser(login)
 	if err != nil {
-		return nil, models.Session{}, err
+		return nil, err
 	}
 	// comapare our passwords to check are they match
 	if !doPasswordsMatch(user.Password, login.Password) {
-		return nil, models.Session{}, errors.New("password don't match")
-	}
-	// create new token
-	newToken, err := GenerateJWTToken(user.Username)
-	if err != nil {
-		return nil, models.Session{}, err
+		return nil, errors.New("password don't match")
 	}
 
 	// get user all permissions
 	permissions, err := s.repo.GetAllUserPermissions(ctx, int64(user.ID))
 	if err != nil {
-		return nil, models.Session{}, err
+		return nil, err
 	}
-
-	var session models.Session
-	session.Permissions = permissions
+	// create new token
+	newToken, err := GenerateJWTToken(int64(user.ID), permissions)
+	if err != nil {
+		return nil, err
+	}
 	cookie.Value = newToken
 	cookie.Expires = time.Now().Add(10 * time.Minute)
-	session.Token = newToken
-	session.ExpireDate = time.Now().Add(10 * time.Minute)
-	session.UserID = user.ID
-	return cookie, session, nil
+
+	return cookie, nil
 }
 
 func (s *AuthService) Logout(cookie *http.Cookie) {
@@ -97,9 +91,12 @@ func (s *AuthService) Logout(cookie *http.Cookie) {
 
 }
 
+func (s *AuthService) GetAllUserPermissions(ctx context.Context, userID int64) (map[string]bool, error) {
+	return s.repo.Auth.GetAllUserPermissions(ctx, userID)
+}
+
 // function to hash password
 func hashPassword(password string) (string, error) {
-
 	var passwordBytes = []byte(password)
 
 	hashedPasswordBytes, err := bcrypt.
@@ -115,26 +112,21 @@ func doPasswordsMatch(hashedPassword, currPassword string) bool {
 	return err == nil
 }
 
-// new token for our session
-func GenerateJWTToken(username string) (string, error) {
+func GenerateJWTToken(userID int64, permissions map[string]bool) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	claims := token.Claims.(jwt.MapClaims)
 
 	claims["authorized"] = true
-	claims["user"] = "@MIras"
-	claims["exp"] = time.Now().Add(time.Minute * 20).Unix()
+	claims["userID"] = userID
+	claims["exp"] = time.Now().Add(time.Hour * 1).Unix()
+	claims["permissions"] = permissions
 
 	tokenString, err := token.SignedString([]byte("qwertyacid12345acidqwerty"))
 
 	if err != nil {
-		fmt.Println("generating JWT Token failed")
 		return "", err
 	}
 
 	return tokenString, nil
-}
-
-func (s *AuthService) GetAllUserPermissions(ctx context.Context, userID int64) (map[string]bool, error) {
-	return s.repo.Auth.GetAllUserPermissions(ctx, userID)
 }
