@@ -11,7 +11,7 @@ type Auth interface {
 	Register(user models.Register) error
 	Login(ctx context.Context, login models.Login) (*http.Cookie, models.Session, error)
 	Logout(cookie *http.Cookie)
-	GetAllUserPermissions(ctx context.Context, userID int64) (models.Permissions, error)
+	GetAllUserPermissions(ctx context.Context, userID int64) (map[string]bool, error)
 }
 
 type Book interface {

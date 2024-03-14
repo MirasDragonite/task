@@ -11,10 +11,11 @@ type User struct {
 }
 
 type Session struct {
-	ID         int
-	UserID     int
-	Token      string
-	ExpireDate time.Time
+	ID          int
+	UserID      int
+	Token       string
+	ExpireDate  time.Time
+	Permissions map[string]bool
 }
 
 type Login struct {
@@ -27,9 +28,4 @@ type Register struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 	Role     string `json:"role"`
-}
-
-type Permissions struct {
-	UserID      int64
-	Permissions map[string]bool
 }

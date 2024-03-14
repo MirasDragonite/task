@@ -46,17 +46,9 @@ func (r *AuthRepo) SelectUser(login models.Login) (models.User, error) {
 	return user, nil
 }
 
-func (r *AuthRepo) GetAllUserPermissions(ctx context.Context, userId int64) (models.Permissions, error) {
+func (r *AuthRepo) GetAllUserPermissions(ctx context.Context, userId int64) (map[string]bool, error) {
 
-	var permissions models.Permissions
-
-	permissions.Permissions = make(map[string]bool)
-
-	// err := r.cache.Get(ctx, "permissions", &permissions)
-	// if err == nil {
-
-	// 	return permissions, nil
-	// }
+	var permissions = make(map[string]bool)
 
 	query := `SELECT permissions.code
 	FROM permissions
@@ -68,22 +60,18 @@ func (r *AuthRepo) GetAllUserPermissions(ctx context.Context, userId int64) (mod
 	if err != nil {
 		return permissions, err
 	}
-	permissions.UserID = userId
+
 	for rows.Next() {
 		var permission string
 		err = rows.Scan(&permission)
 
 		if err != nil {
-			return models.Permissions{}, err
+			return nil, err
 		}
 
-		permissions.Permissions[permission] = true
+		permissions[permission] = true
 	}
 
-	err = r.cache.Set(&cache.Item{Ctx: ctx, Key: "permissions", Value: permissions, TTL: time.Minute * 15})
-	if err != nil {
-		return models.Permissions{}, err
-	}
 	return permissions, nil
 }
 

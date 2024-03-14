@@ -11,23 +11,21 @@ func (h *Handler) RequirePermissions(request http.HandlerFunc, permissions ...st
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 		var session models.Session
+		// get session from cache to get from there user permissions
 		err := h.cache.Get(r.Context(), "session", &session)
 		if err != nil {
 			http.Error(w, "Unauthorized", http.StatusUnauthorized)
 			return
 		}
-		fmt.Println(session)
-		availablePermissions, err := h.Service.Auth.GetAllUserPermissions(r.Context(), int64(session.UserID))
-		if err != nil {
-			http.Error(w, "bad request"+err.Error(), http.StatusBadRequest)
-			return
-		}
-		fmt.Println(permissions, availablePermissions)
-		if !Includes(permissions, availablePermissions.Permissions) {
+
+		fmt.Println(permissions, session.Permissions)
+		//chech if user have required permissions
+		if !Includes(permissions, session.Permissions) {
 			http.Error(w, "Access denied", http.StatusBadRequest)
 			return
 		}
 
+		// let use the handle func if everything is ok
 		request.ServeHTTP(w, r)
 	})
 }
@@ -60,6 +58,7 @@ func (h *Handler) RequireAuth(request http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
+// func to check is this user have required permissions
 func Includes(permissions []string, available map[string]bool) bool {
 
 	for _, ch := range permissions {

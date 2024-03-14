@@ -11,7 +11,7 @@ import (
 type Auth interface {
 	CreateUser(user models.Register) (int64, error)
 	SelectUser(login models.Login) (models.User, error)
-	GetAllUserPermissions(ctx context.Context, userId int64) (models.Permissions, error)
+	GetAllUserPermissions(ctx context.Context, userId int64) (map[string]bool, error)
 	AddForUser(userID int64, codes ...string) error
 }
 

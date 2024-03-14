@@ -34,6 +34,7 @@ func (s *AuthService) Register(user models.Register) error {
 	if err != nil {
 		return err
 	}
+	// set user permissions by his role
 	permissions := []string{"book:read", "book:create"}
 	if user.Role == "admin" {
 		permissions = append(permissions, "book:delete", "book:read_all")
@@ -65,14 +66,20 @@ func (s *AuthService) Login(ctx context.Context, login models.Login) (*http.Cook
 	if !doPasswordsMatch(user.Password, login.Password) {
 		return nil, models.Session{}, errors.New("password don't match")
 	}
-
+	// create new token
 	newToken, err := GenerateJWTToken(user.Username)
-
 	if err != nil {
 		return nil, models.Session{}, err
 	}
-	var session models.Session
 
+	// get user all permissions
+	permissions, err := s.repo.GetAllUserPermissions(ctx, int64(user.ID))
+	if err != nil {
+		return nil, models.Session{}, err
+	}
+
+	var session models.Session
+	session.Permissions = permissions
 	cookie.Value = newToken
 	cookie.Expires = time.Now().Add(10 * time.Minute)
 	session.Token = newToken
@@ -128,6 +135,6 @@ func GenerateJWTToken(username string) (string, error) {
 	return tokenString, nil
 }
 
-func (s *AuthService) GetAllUserPermissions(ctx context.Context, userID int64) (models.Permissions, error) {
+func (s *AuthService) GetAllUserPermissions(ctx context.Context, userID int64) (map[string]bool, error) {
 	return s.repo.Auth.GetAllUserPermissions(ctx, userID)
 }
